@@ -1,3 +1,6 @@
+# ============================================================
+# 📘 Meeting Notes Summarizer - FastAPI + Azure OpenAI
+# ============================================================
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -5,9 +8,9 @@ from openai import AzureOpenAI
 from dotenv import load_dotenv
 import os
 
-# ==========================
-# Load biến môi trường từ .env
-# ==========================
+# ============================================================
+# 1️⃣ Load environment variables
+# ============================================================
 load_dotenv()
 
 endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
@@ -15,44 +18,61 @@ api_key = os.getenv("AZURE_OPENAI_API_KEY")
 api_version = os.getenv("AZURE_OPENAI_API_VERSION")
 deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT")
 
+# Initialize Azure OpenAI client
 client = AzureOpenAI(
     api_key=api_key,
     api_version=api_version,
     azure_endpoint=endpoint
 )
 
-# ==========================
-# FastAPI app
-# ==========================
+# ============================================================
+# 2️⃣ Load system prompt from Markdown file
+# ============================================================
+def load_system_prompt(md_path: str = "prompt-guidelines.md") -> str:
+    """Đọc nội dung từ file Markdown làm system prompt."""
+    if os.path.exists(md_path):
+        with open(md_path, "r", encoding="utf-8") as f:
+            return f.read()
+    else:
+        return "You are a helpful assistant specializing in meeting note summarization."
+
+system_prompt = load_system_prompt()
+
+# ============================================================
+# 3️⃣ FastAPI setup
+# ============================================================
 app = FastAPI()
 
-# Cho phép frontend gọi API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Cho phép mọi domain (hoặc giới hạn theo thực tế)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ==========================
-# Request model
-# ==========================
+# ============================================================
+# 4️⃣ Data model
+# ============================================================
 class ChatRequest(BaseModel):
     message: str
 
-# ==========================
-# Lưu hội thoại (RAM)
-# ==========================
+# ============================================================
+# 5️⃣ In-memory message store
+# ============================================================
 messages = [
-    {"role": "system", "content": "Bạn là một thư kí, nhiệm vụ của bạn là tóm tắt lại meeting notes và cùng ngôn ngữ với prompt được nhập vào. Nếu như câu hỏi không liên quan đến vệc meeting note thì từ chối trả lời nhé"}
+    {
+        "role": "system",
+        "content": system_prompt
+    }
 ]
 
-# ==========================
-# API endpoint
-# ==========================
+# ============================================================
+# 6️⃣ Chat endpoint
+# ============================================================
 @app.post("/chat")
 def chat(request: ChatRequest):
+    """API chính — nhận input từ người dùng và trả về tóm tắt meeting notes."""
     messages.append({"role": "user", "content": request.message})
 
     response = client.chat.completions.create(
