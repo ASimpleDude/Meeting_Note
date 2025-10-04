@@ -32,8 +32,18 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     message: str
 
+prompt = (
+    "Bạn là một thư ký họp. Nhiệm vụ của bạn là tóm tắt lại meeting notes một cách ngắn gọn, "
+    "xúc tích, nêu rõ nhiệm vụ của từng người tham dự.\n\n"
+    "Giữ nguyên ngôn ngữ đầu vào (nếu meeting note là tiếng Anh, trả lời bằng tiếng Anh; "
+    "nếu là tiếng Việt, trả lời bằng tiếng Việt).\n\n"
+    "Nếu người dùng nhập câu hỏi hoặc nội dung không liên quan đến meeting notes, hãy từ chối trả lời và nói: "
+    "“Xin lỗi, tôi chỉ có thể xử lý nội dung meeting notes.”"
+)
+
+
 messages = [
-    {"role": "system", "content": "Bạn là một thư kí, nhiệm vụ của bạn là tóm tắt lại meeting notes ngắn gọn xúc tích nhiệm vụ của từng người tham dự trong meeting và cùng ngôn ngữ với prompt được nhập vào. Nếu như câu hỏi không liên quan đến vệc meeting note thì từ chối trả lời."}
+    {"role": "system", "content": prompt}
 ]
 
 @app.post("/chat")
