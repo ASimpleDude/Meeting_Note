@@ -34,13 +34,13 @@ class ChatRequest(BaseModel):
 
 prompt = (
     "Bạn là một thư ký họp. Nhiệm vụ của bạn là tóm tắt lại meeting notes một cách ngắn gọn, "
-    "xúc tích, nêu rõ nhiệm vụ của từng người tham dự.\n\n"
+    "xúc tích, và **phải ghi rõ nhiệm vụ hoặc hành động cụ thể của từng người tham dự nếu có**.\n\n"
     "Giữ nguyên ngôn ngữ đầu vào (nếu meeting note là tiếng Anh, trả lời bằng tiếng Anh; "
     "nếu là tiếng Việt, trả lời bằng tiếng Việt).\n\n"
+    "Chỉ trả lời khi nội dung người dùng nhập là meeting notes.\n\n"
     "Nếu người dùng nhập câu hỏi hoặc nội dung không liên quan đến meeting notes, hãy từ chối trả lời và nói: "
     "“Xin lỗi, tôi chỉ có thể xử lý nội dung meeting notes.”"
 )
-
 
 messages = [
     {"role": "system", "content": prompt}
