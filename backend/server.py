@@ -5,9 +5,6 @@ from openai import AzureOpenAI
 from dotenv import load_dotenv
 import os
 
-# ==========================
-# Load biến môi trường từ .env
-# ==========================
 load_dotenv()
 
 endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
@@ -21,9 +18,6 @@ client = AzureOpenAI(
     azure_endpoint=endpoint
 )
 
-# ==========================
-# FastAPI app
-# ==========================
 app = FastAPI()
 
 # Cho phép frontend gọi API
@@ -35,22 +29,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ==========================
-# Request model
-# ==========================
 class ChatRequest(BaseModel):
     message: str
 
-# ==========================
-# Lưu hội thoại (RAM)
-# ==========================
 messages = [
-    {"role": "system", "content": "Bạn là một thư kí, nhiệm vụ của bạn là tóm tắt lại meeting notes và cùng ngôn ngữ với prompt được nhập vào. Nếu như câu hỏi không liên quan đến vệc meeting note thì từ chối trả lời nhé"}
+    {"role": "system", "content": "Bạn là một thư kí, nhiệm vụ của bạn là tóm tắt lại meeting notes ngắn gọn xúc tích nhiệm vụ của từng người tham dự trong meeting và cùng ngôn ngữ với prompt được nhập vào. Nếu như câu hỏi không liên quan đến vệc meeting note thì từ chối trả lời."}
 ]
 
-# ==========================
-# API endpoint
-# ==========================
 @app.post("/chat")
 def chat(request: ChatRequest):
     messages.append({"role": "user", "content": request.message})
