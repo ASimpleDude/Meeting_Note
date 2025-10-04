@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Chatbot</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            background: #f4f6f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            height: 100vh;
+        }
+
+        h2 {
+            margin: 15px;
+            color: #333;
+        }
+
+        #chat {
+            width: 90%;
+            max-width: 100%;
+            height: 70vh;
+            overflow-y: auto;
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            font-size: 18px;
+        }
+
+        .msg {
+            margin: 10px 0;
+            padding: 10px 14px;
+            border-radius: 15px;
+            max-width: 75%;
+            clear: both;
+        }
+
+        .user {
+            background: #0078ff;
+            color: white;
+            float: right;
+            text-align: right;
+        }
+
+        .ai {
+            background: #e9ecef;
+            color: #333;
+            float: left;
+            text-align: left;
+        }
+
+        #inputBox {
+            margin-top: 15px;
+            width: 90%;
+            max-width: 600px;
+            display: flex;
+        }
+
+        #userInput {
+            flex: 1;
+            padding: 10px;
+            border-radius: 20px;
+            border: 1px solid #ccc;
+            outline: none;
+        }
+
+        button {
+            margin-left: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            background: #0078ff;
+            color: white;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #005fcc;
+        }
+        .msg {
+            margin: 10px 0;
+            padding: 10px 14px;
+            border-radius: 15px;
+            max-width: 75%;
+            clear: both;
+            white-space: pre-wrap;   /* giữ nguyên xuống dòng và khoảng trắng */
+            word-wrap: break-word;   /* tự động xuống dòng nếu quá dài */
+        }
+
+    </style>
+</head>
+<body>
+<h2>👩🏻 Cô thư kí chân dài</h2>
+<div id="chat"></div>
+
+<div id="inputBox">
+    <input id="userInput" type="text" placeholder="Nhập tin nhắn..." onkeydown="handleKey(event)" />
+    <button onclick="sendMessage()">Gửi</button>
+</div>
+
+<script>
+    function handleKey(event) {
+        if (event.key === "Enter") {
+            event.preventDefault(); // tránh xuống dòng
+            sendMessage();
+        }
+    }
+
+    async function sendMessage() {
+        const userInput = document.getElementById("userInput");
+        const chatDiv = document.getElementById("chat");
+
+        let msg = userInput.value.trim();
+        if (!msg) return;
+
+        // render user message
+        chatDiv.innerHTML += `<div class="msg user">${msg}</div>`;
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+        userInput.value = "";
+
+        // call backend
+        const response = await fetch("http://127.0.0.1:8000/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: msg })
+        });
+
+        const data = await response.json();
+        console.log(data.reply);
+        // render AI reply
+        chatDiv.innerHTML += `<div class="msg ai">${data.reply}</div>`;
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+</script>
+</body>
+</html>
