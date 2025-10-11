@@ -1,0 +1,10 @@
+{
+  "meeting_title": "Weekly AI Team Sync",
+  "summary": "Cuộc họp thảo luận tiến độ mô hình GPT và roadmap tuần tới.",
+  "participants": ["Lan", "Minh", "Huy"],
+  "action_items": [
+    "Minh cập nhật tài liệu kỹ thuật GPT-5",
+    "Lan chuẩn bị báo cáo tuần tới"
+  ],
+  "blockers": ["Thiếu dữ liệu huấn luyện từ nhóm Data"]
+}

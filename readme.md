@@ -1,7 +1,5 @@
-Install packages:
-pip install python-dotenv
-pip install fastapi uvicorn openai
-
+## Install packages:
+pip install -r requirements.txt
 
 
 Run app:
@@ -13,3 +11,14 @@ AZURE_OPENAI_API_KEY= tự đút key vào đây
 AZURE_OPENAI_API_VERSION=2024-08-01-preview
 AZURE_OPENAI_DEPLOYMENT=GPT-4o-mini
 
+UI → POST /chat → ai_chat.py
+      ↓
+moderate_input() ✅
+      ↓
+generate_summary() 🧠
+      ↓
+_call_azure_openai() (structured JSON)
+      ↓
+AzureOpenAI → model trả JSON
+      ↓
+Parse JSON → gửi về frontend
