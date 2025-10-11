@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import ai_chat
+from api.routes import ai_chat, ai_batch
 
 app = FastAPI(
     title="Meeting Notes Summarizer API",
@@ -18,6 +18,7 @@ app.add_middleware(
 
 # Routes
 app.include_router(ai_chat.router)
+app.include_router(ai_batch.router)
 
 @app.get("/")
 def root():

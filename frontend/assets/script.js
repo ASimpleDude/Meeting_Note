@@ -127,3 +127,53 @@ document.getElementById("newSessionBtn").onclick = () => {
   currentSession = createNewSession();
   renderChat();
 };
+// ===============================
+// 🧠 GỬI NHIỀU TIN NHẮN MỘT LÚC (BATCH)
+// ===============================
+document.getElementById("batchBtn").onclick = async () => {
+  const input = prompt("Nhập nhiều tin nhắn (mỗi dòng là một tin):");
+  if (!input) return;
+
+  const messages = input.split("\n").map(m => m.trim()).filter(m => m !== "");
+  if (messages.length === 0) {
+    alert("Không có tin nhắn hợp lệ.");
+    return;
+  }
+
+  const chatDiv = document.getElementById("chat");
+  chatDiv.innerHTML += `<div class="msg user"><pre>📤 Gửi ${messages.length} tin nhắn trong hội thoại...</pre></div>`;
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+
+  try {
+    const response = await fetch("http://127.0.0.1:8000/api/chat/batch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: messages,
+        session_id: currentSession
+      })
+    });
+
+    const data = await response.json();
+    console.log("Batch API response:", data);
+
+    // ✅ Giả sử backend trả về { "replies": [ ... ] }
+    if (data.replies && Array.isArray(data.replies)) {
+      for (let i = 0; i < data.replies.length; i++) {
+        const reply = data.replies[i];
+        chatDiv.innerHTML += `<div class="msg ai"><pre>🧩 Batch ${i+1}: ${reply}</pre></div>`;
+        // Lưu từng phản hồi vào session
+        sessions[currentSession].push({ role: "assistant", content: reply });
+      }
+      saveSessionsToStorage();
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    } else {
+      chatDiv.innerHTML += `<div class="msg ai" style="color:red;"><pre>⚠️ Dữ liệu trả về không đúng định dạng.</pre></div>`;
+    }
+
+  } catch (error) {
+    console.error("Batch error:", error);
+    chatDiv.innerHTML += `<div class="msg ai" style="color:red;"><pre>⚠️ Lỗi: Không kết nối được server</pre></div>`;
+  }
+};
+
