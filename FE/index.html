@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FastAPI + Azure OpenAI Chat</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #chat-box { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; }
+        .message { margin: 5px 0; }
+        .user { color: blue; }
+        .assistant { color: green; }
+    </style>
+</head>
+<body>
+<h2>Chat with Azure OpenAI</h2>
+
+<label>Session ID:</label>
+<input type="text" id="sessionId" value="session1" />
+<br><br>
+
+<div id="chat-box"></div>
+
+<input type="text" id="prompt" placeholder="Enter your message..." style="width:80%;" />
+<button onclick="sendMessage()">Send</button>
+
+<script>
+    async function sendMessage() {
+        const sessionId = document.getElementById("sessionId").value;
+        const prompt = document.getElementById("prompt").value;
+        if (!prompt) return;
+
+        // Hiển thị tin nhắn user
+        const chatBox = document.getElementById("chat-box");
+        chatBox.innerHTML += `<div class="message user"><b>You:</b> ${prompt}</div>`;
+        document.getElementById("prompt").value = "";
+
+        try {
+            const response = await fetch("http://127.0.0.1:8000/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ session_id: sessionId, message: prompt })
+            });
+
+            const data = await response.json();
+            if (data.reply) {
+                chatBox.innerHTML += `<div class="message assistant"><b>AI:</b> ${data.reply}</div>`;
+            } else if (data.detail) {
+                chatBox.innerHTML += `<div class="message assistant"><b>Error:</b> ${data.detail}</div>`;
+            }
+        } catch (err) {
+            chatBox.innerHTML += `<div class="message assistant"><b>Error:</b> ${err}</div>`;
+        }
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+</script>
+</body>
+</html>
