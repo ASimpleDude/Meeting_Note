@@ -130,11 +130,21 @@ document.getElementById("newSessionBtn").onclick = () => {
 // ===============================
 // 🧠 GỬI NHIỀU TIN NHẮN MỘT LÚC (BATCH)
 // ===============================
-document.getElementById("batchBtn").onclick = async () => {
-  const input = prompt("Nhập nhiều tin nhắn (mỗi dòng là một tin):");
-  if (!input) return;
+document.getElementById("batchBtn").addEventListener("click", () => {
+  // Toggle hiển thị
+  document.getElementById("popup-batch").style.display = "block";
+});
 
-  const messages = input.split("\n").map(m => m.trim()).filter(m => m !== "");
+// Nếu bạn muốn đóng bằng nút "Close" trong popup:
+document.getElementById("closePopup").addEventListener("click", () => {
+  // Toggle hiển thị
+  document.getElementById("popup-batch").style.display = "none";
+});
+document.getElementById("sendBatch").onclick = async () => {
+  document.getElementById("popup-batch").style.display = "none";
+  var input = document.getElementById("batchInput").value;
+  console.log(input);
+  const messages = input.split("note").map(m => m.trim()).filter(m => m !== "");
   if (messages.length === 0) {
     alert("Không có tin nhắn hợp lệ.");
     return;

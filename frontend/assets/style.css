@@ -220,3 +220,17 @@ button:active {
 #batchBtn:hover {
   background: #15803d;
 }
+
+#popup-batch {
+  display: none; /* Ẩn mặc định */
+  position: absolute;
+  width: 992px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border: 1px solid #ccc;
+  padding: 20px;
+  z-index: 100;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
