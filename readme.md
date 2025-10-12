@@ -3,7 +3,7 @@ pip install -r requirements.txt
 
 
 Run app:
-uvicorn backend.server:app --reload --port 8000
+uvicorn api.main:app --reload --port 8000
 
 Tạo file .env theo template sau ở folder gốc Meeting_Note:
 AZURE_OPENAI_ENDPOINT=https://aiportalapi.stu-platform.live/jpe
