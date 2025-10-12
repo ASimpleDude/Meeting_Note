@@ -7,21 +7,37 @@
   <link rel="stylesheet" href="./assets/style.css" />
 </head>
 <body>
-  <h2>💬 AI Chatbot</h2>
 
-  <div id="chat"></div>
+<div id="container">
+  <!-- Cột bên trái: danh sách session -->
+  <div id="sidebar">
+    <h3>💬 Lịch sử trò chuyện</h3>
+    <ul id="sessionList"></ul>
+    <button id="newSessionBtn">+ Cuộc trò chuyện mới</button>
+  </div>
 
-  <div id="inputBox">
-  <textarea
-    id="userInput"
-    rows="1"
-    placeholder="Nhập tin nhắn..."
-    oninput="autoResize(this)"
-    onkeydown="handleKey(event)"
-  ></textarea>
-  <button onclick="sendMessage()">Send</button>
+  <!-- Cột bên phải: chat -->
+  <div id="chatWrapper">
+    <h2>AI Chatbot</h2>
+    <div id="chat"></div>
+    <div id="inputBox">
+      <textarea id="userInput" rows="1" placeholder="Nhập tin nhắn..." oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+      <button onclick="sendMessage()">Send</button>
+      <button id="batchBtn" style="background:#16a34a;">Batch</button>
+    </div>
+  </div>
+  <div id="popup-batch">
+    <h3>Send batch request:</h3>
+    <div style="width: 100%; margin-x: 20px">
+      <textarea style="width: 100%" id="batchInput" rows="15"></textarea>
+    </div>
+    <div>
+      <button id="sendBatch">Send</button>
+      <button id="closePopup">Close</button>
+    </div>
+  </div>
 </div>
 
-  <script src="./assets/script.js"></script>
+<script src="./assets/script.js"></script>
 </body>
 </html>

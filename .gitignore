@@ -2,3 +2,7 @@
 .env.local
 .env.development
 .env.production
+**/__pycache__/
+*.py[cod]
+.idea
+/api/artifacts/conversation_log
