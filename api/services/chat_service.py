@@ -6,6 +6,7 @@ from api.config.config import (
     AZURE_OPENAI_API_VERSION,
     AZURE_OPENAI_ENDPOINT,
 )
+from api.services import chat_tts
 from api.services.moderation_service import moderate_input
 import chromadb
 import logging
@@ -90,9 +91,8 @@ def search_memory(session_id: str, query: str, top_k: int = 3):
     wait=wait_random_exponential(min=1, max=30),
     stop=stop_after_attempt(3)
 )
-def _call_azure_openai(messages: list):
-    """Gọi Azure OpenAI chat model."""
-    logger.info("🔄 Gửi request đến Azure OpenAI...")
+def _call_azure_openai(messages: list, tts: bool = False, id: str = ""):
+    """Internal helper — gọi API Azure OpenAI."""
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=messages,
@@ -100,13 +100,17 @@ def _call_azure_openai(messages: list):
         max_tokens=800,
         timeout=30,
     )
-    logger.info("✅ Nhận phản hồi từ Azure OpenAI")
+
+    if tts:
+        chat_tts.save_audio_to_file(response.choices[0].message.content, "api/artifacts/audio/" + id + ".wav");
+
     return response
 
 # ============================================================
 # 🧾 Hàm chính: Gọi GPT + sử dụng Chroma memory
 # ============================================================
-def generate_summary(messages: list, user_input: str = None, memory_context: str = None) -> str:
+
+def generate_summary(messages: list, user_input: str = None, memory_context: str = None, tts: bool = False, ss_id: str = "") -> str:
     """
     Gọi Azure OpenAI và trả về chuỗi text.
     Ghép thêm phần memory_context nếu có.
@@ -123,7 +127,7 @@ def generate_summary(messages: list, user_input: str = None, memory_context: str
         # if not moderate_input(user_message):
         #     return "🚫 Nội dung bị từ chối — vui lòng không gửi dữ liệu nhạy cảm."
 
-        response = _call_azure_openai(temp_messages)
+        response = _call_azure_openai(messages, tts, ss_id)
 
         if not response or not response.choices:
             return "⚠️ Không có phản hồi từ mô hình."

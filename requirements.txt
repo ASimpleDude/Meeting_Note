@@ -15,6 +15,12 @@ pydantic
 # ===== Vector DB & Embedding =====
 chromadb
 sentence-transformers
+transformers
+torch
+
+# ===== Audio / Speech (nếu dùng TTS/STT sau này) =====
+soundfile
+IPython
 
 # ===== Optional (Logging, Utils) =====
 tqdm

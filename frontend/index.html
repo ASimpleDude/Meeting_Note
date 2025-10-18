@@ -21,10 +21,16 @@
     <h2>AI Chatbot</h2>
     <div id="chat"></div>
     <div id="inputBox">
-      <textarea id="userInput" rows="1" placeholder="Nhập tin nhắn..." oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
-      <button onclick="sendMessage()">Send</button>
-      <button id="batchBtn" style="background:#16a34a;">Batch</button>
+        <div>
+            <input type="checkbox" id="tts">Text To Speech
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <textarea id="userInput" rows="1" placeholder="Nhập tin nhắn..." oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+            <button onclick="sendMessage()">Send</button>
+            <button id="batchBtn" style="background:#16a34a;">Batch</button>
+        </div>
     </div>
+
   </div>
   <div id="popup-batch">
     <h3>Send batch request:</h3>

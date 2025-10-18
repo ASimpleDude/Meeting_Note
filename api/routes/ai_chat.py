@@ -23,6 +23,9 @@ sessions_messages = {}
 async def chat_endpoint(request: Request):
     data = await request.json()
     user_input = data.get("message")
+    tts = data.get("tts", False)
+    
+    # Lấy session_id từ client, nếu undefined hoặc None thì tạo mới
     session_id = data.get("session_id")
 
     # ✅ Tạo session mới nếu chưa có
@@ -45,7 +48,9 @@ async def chat_endpoint(request: Request):
     reply = generate_summary(
         messages=sessions_messages[session_id],
         user_input=user_input,
-        memory_context=memory_context
+        memory_context=memory_context,
+        tts=tts,
+        ss_id=session_id
     )
 
     # ✅ Lưu tin nhắn assistant

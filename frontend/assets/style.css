@@ -159,8 +159,6 @@ body {
   bottom: 15px;
   width: calc(100% - 270px); /* trừ sidebar */
   max-width: 800px;
-  display: flex;
-  align-items: flex-end;
   justify-content: center;
   background: transparent;
   gap: 10px;
