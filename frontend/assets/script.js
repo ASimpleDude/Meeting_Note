@@ -48,7 +48,17 @@ function renderChat() {
   const messages = sessions[currentSession] || [];
   for (const msg of messages) {
     const cls = msg.role === "user" ? "user" : "ai";
-    chatDiv.innerHTML += `<div class="msg ${cls}"><pre>${msg.content}</pre></div>`;
+    if (msg.role === "user") {
+      chatDiv.innerHTML += `<div class="msg user"><pre>${msg.content}</pre></div>`;
+    } else {
+        chatDiv.innerHTML += `<div class="msg ${cls}"><pre>${msg.content}</pre></div>
+      <div style="margin-top: 10px;">
+        <audio controls style="width: 100%; max-width: 400px;">
+          <source src="../../api/artifacts/audio/50afd953-5107-4ee8-a00d-d261ae717e56.wav" type="audio/wav">
+          Your browser does not support the audio element.
+        </audio>
+      </div>`;
+    }
   }
   chatDiv.scrollTop = chatDiv.scrollHeight;
 }
@@ -77,8 +87,10 @@ function handleKey(event) {
 // ===============================
 async function sendMessage() {
   const userInput = document.getElementById("userInput");
+  const ttsInput = document.getElementById("tts");
   const chatDiv = document.getElementById("chat");
   const msg = userInput.value.trim();
+  const tts = ttsInput.checked;
   if (!msg) return;
 
   // Append user message
@@ -97,13 +109,20 @@ async function sendMessage() {
     const response = await fetch("http://127.0.0.1:8000/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: msg, session_id: currentSession })
+      body: JSON.stringify({ message: msg, session_id: currentSession, tts: tts })
     });
     const data = await response.json();
     const reply = data.reply;
 
     // Append AI message
-    chatDiv.innerHTML += `<div class="msg ai"><pre>${reply}</pre></div>`;
+    chatDiv.innerHTML += `<div class="msg ai"><pre>${reply}</pre></div>
+      <div style="margin-top: 10px;">
+        <audio controls style="width: 100%; max-width: 400px;">
+          <source src="../../api/artifacts/audio/50afd953-5107-4ee8-a00d-d261ae717e56.wav" type="audio/wav">
+          Your browser does not support the audio element.
+        </audio>
+      </div>
+    `;
     chatDiv.scrollTop = chatDiv.scrollHeight;
 
     // Lưu AI message

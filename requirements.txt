@@ -4,3 +4,7 @@ openai
 python-dotenv
 tenacity
 pydantic
+transformers
+torch
+IPython
+soundfile

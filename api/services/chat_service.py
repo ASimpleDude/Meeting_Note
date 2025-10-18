@@ -6,6 +6,7 @@ from api.config.config import (
     AZURE_OPENAI_ENDPOINT,
     AZURE_OPENAI_DEPLOYMENT,
 )
+from api.services import chat_tts
 from api.services.moderation_service import moderate_input
 import logging
 
@@ -28,7 +29,7 @@ client = AzureOpenAI(
     wait=wait_random_exponential(min=1, max=30),
     stop=stop_after_attempt(3)
 )
-def _call_azure_openai(messages: list):
+def _call_azure_openai(messages: list, tts: bool = False, id: str = ""):
     """Internal helper — gọi API Azure OpenAI."""
     response = client.chat.completions.create(
         model=AZURE_OPENAI_DEPLOYMENT,
@@ -36,12 +37,15 @@ def _call_azure_openai(messages: list):
         temperature=0.2,
         max_tokens=600,
     )
+
+    if tts:
+        chat_tts.save_audio_to_file(response.choices[0].message.content, "api/artifacts/audio/" + id + ".wav");
     return response
 
 # ============================================================
 # 🧾 Hàm chính
 # ============================================================
-def generate_summary(messages: list) -> str:
+def generate_summary(messages: list, tts: bool = False, ss_id: str = "") -> str:
     """Gọi Azure OpenAI chat model và trả về raw string."""
     user_message = messages[-1]["content"]
 
@@ -50,7 +54,7 @@ def generate_summary(messages: list) -> str:
     #     return "🚫 Nội dung bị từ chối — vui lòng không gửi dữ liệu nhạy cảm."
 
     try:
-        response = _call_azure_openai(messages)
+        response = _call_azure_openai(messages, tts, ss_id)
 
         if not response or not response.choices:
             return "⚠️ Không có phản hồi từ mô hình."
