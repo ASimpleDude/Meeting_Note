@@ -6,6 +6,7 @@ from api.config.config import (
     AZURE_OPENAI_ENDPOINT,
     AZURE_OPENAI_DEPLOYMENT,
 )
+from sentence_transformers import SentenceTransformer
 from api.services import chat_tts
 from api.services.moderation_service import moderate_input
 import chromadb
