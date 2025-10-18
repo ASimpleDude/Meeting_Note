@@ -1,6 +1,20 @@
+# ===== Web Framework =====
 fastapi
 uvicorn
+
+# ===== OpenAI & Azure =====
 openai
 python-dotenv
+
+# ===== Retry Logic =====
 tenacity
+
+# ===== Data Validation =====
 pydantic
+
+# ===== Vector DB & Embedding =====
+chromadb
+sentence-transformers
+
+# ===== Optional (Logging, Utils) =====
+tqdm
