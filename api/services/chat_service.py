@@ -1,11 +1,12 @@
-from sentence_transformers import SentenceTransformer
 from openai import AzureOpenAI, APIError, RateLimitError, APITimeoutError
 from tenacity import retry, wait_random_exponential, stop_after_attempt, retry_if_exception_type
 from api.config.config import (
     AZURE_OPENAI_API_KEY,
     AZURE_OPENAI_API_VERSION,
     AZURE_OPENAI_ENDPOINT,
+    AZURE_OPENAI_DEPLOYMENT,
 )
+from sentence_transformers import SentenceTransformer
 from api.services import chat_tts
 from api.services.moderation_service import moderate_input
 import chromadb
@@ -94,27 +95,24 @@ def search_memory(session_id: str, query: str, top_k: int = 3):
 def _call_azure_openai(messages: list, tts: bool = False, id: str = ""):
     """Internal helper — gọi API Azure OpenAI."""
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=AZURE_OPENAI_DEPLOYMENT,
         messages=messages,
-        temperature=0.3,
-        max_tokens=800,
-        timeout=30,
+        temperature=0.2,
+        max_tokens=600,
     )
-
-    if tts:
-        chat_tts.save_audio_to_file(response.choices[0].message.content, "api/artifacts/audio/" + id + ".wav");
-
     return response
 
 # ============================================================
 # 🧾 Hàm chính: Gọi GPT + sử dụng Chroma memory
 # ============================================================
+def generate_summary(messages: list, tts: bool = False, ss_id: str = "", user_input: str = None, memory_context: str = None) -> str:
+    """Gọi Azure OpenAI chat model và trả về raw string."""
 
-def generate_summary(messages: list, user_input: str = None, memory_context: str = None, tts: bool = False, ss_id: str = "") -> str:
-    """
-    Gọi Azure OpenAI và trả về chuỗi text.
-    Ghép thêm phần memory_context nếu có.
-    """
+
+    # # 1️⃣ Kiểm duyệt nội dung (bật lại khi cần)
+    # if not moderate_input(user_message):
+    #     return "🚫 Nội dung bị từ chối — vui lòng không gửi dữ liệu nhạy cảm."
+
     try:
         user_message = user_input or messages[-1]["content"]
 
@@ -124,10 +122,7 @@ def generate_summary(messages: list, user_input: str = None, memory_context: str
         temp_messages = messages.copy()
         temp_messages[-1]["content"] = user_message
 
-        # if not moderate_input(user_message):
-        #     return "🚫 Nội dung bị từ chối — vui lòng không gửi dữ liệu nhạy cảm."
-
-        response = _call_azure_openai(messages, tts, ss_id)
+        response = _call_azure_openai(temp_messages, tts, ss_id)
 
         if not response or not response.choices:
             return "⚠️ Không có phản hồi từ mô hình."

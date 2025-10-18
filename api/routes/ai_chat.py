@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request
 from api.utils.session_manager import create_session_id
 from api.utils.conversation_logger import save_message_to_log
+from api.services.chat_service import generate_summary
 from api.utils.prompt_loader import load_system_prompt
 from api.services.chat_service import (
     generate_summary,
@@ -11,20 +12,16 @@ from api.services.chat_service import (
 
 router = APIRouter()
 
-# ============================================================
-# 💬 Bộ nhớ hội thoại ngắn hạn (RAM)
-# ============================================================
+# Lưu toàn bộ message cho mỗi session
 sessions_messages = {}
 
-# ============================================================
-# 🚀 API chính
-# ============================================================
 @router.post("/api/chat")
 async def chat_endpoint(request: Request):
     data = await request.json()
+    print(data)
     user_input = data.get("message")
     tts = data.get("tts", False)
-    
+
     # Lấy session_id từ client, nếu undefined hoặc None thì tạo mới
     session_id = data.get("session_id")
 
@@ -34,8 +31,10 @@ async def chat_endpoint(request: Request):
 
     # ✅ Nếu session chưa có thì thêm system prompt
     if session_id not in sessions_messages:
-        system_prompt = load_system_prompt()
-        sessions_messages[session_id] = [{"role": "system", "content": system_prompt}]
+        system_prompt = load_system_prompt()  # 🔹 load system prompt
+        sessions_messages[session_id] = [
+            {"role": "system", "content": system_prompt}
+        ]
 
     # ✅ Lưu tin nhắn user
     sessions_messages[session_id].append({"role": "user", "content": user_input})
@@ -49,8 +48,8 @@ async def chat_endpoint(request: Request):
         messages=sessions_messages[session_id],
         user_input=user_input,
         memory_context=memory_context,
-        tts=tts,
-        ss_id=session_id
+        tts = tts,
+        ss_id = session_id
     )
 
     # ✅ Lưu tin nhắn assistant
@@ -61,3 +60,4 @@ async def chat_endpoint(request: Request):
     save_to_chroma(session_id, user_input, reply)
 
     return {"session_id": session_id, "reply": reply}
+
