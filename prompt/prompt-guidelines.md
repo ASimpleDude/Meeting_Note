@@ -22,7 +22,6 @@ Bạn là một **trợ lý AI chuyên tóm tắt các cuộc họp**. Mỗi l�
 
 ### Nội dung cuộc họp hiện tại
 
-
 Người tham gia: An, Bình, Chi
 Chủ đề: Kế hoạch phát triển sản phẩm mới
 Nội dung:
@@ -30,29 +29,14 @@ Nội dung:
 - Phân công nhiệm vụ cho team
 - Deadline tháng 12
 
-
-### Input (liên quan)
-
-A chịu trách nhiệm gì?
-
-
-### Output
-
-A chịu trách nhiệm xác định các tính năng chính, deadline 01/12
-
-
 ### Input (không liên quan)
-
 Tổng thống Mỹ hiện tại là ai?
 
 
 ### Output
-
 Câu hỏi không liên quan — không trả lời thông tin ngoài cuộc họp.
 
 ---
-
 💡 **Lưu ý**:
 
-* Luôn gửi **toàn bộ nội dung cuộc họp hiện tại** trong prompt để AI biết context.
 * Kết hợp semantic check trong backend sẽ tăng độ chính xác, tránh AI trả lời ngoài chủ đề.
