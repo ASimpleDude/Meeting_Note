@@ -33,3 +33,39 @@ def save_audio_to_file(text, output_path):
     sf.write(output_path, waveform[0], sampling_rate)
     
     return output_path
+
+# =========================
+# TTS libraries
+# =========================
+from transformers import VitsModel, AutoTokenizer
+import torch
+import soundfile as sf
+import os, uuid
+
+# Load TTS model (một lần khi khởi động server)
+tts_model = VitsModel.from_pretrained("facebook/mms-tts-vie")
+tts_tokenizer = AutoTokenizer.from_pretrained("facebook/mms-tts-vie")
+TTS_OUTPUT_DIR = "api/artifacts/audio"
+os.makedirs(TTS_OUTPUT_DIR, exist_ok=True)
+
+def generate_tts_audio(session_id: str, text: str) -> str:
+    """
+    Sinh file TTS và trả về đường dẫn tuyệt đối để mở bằng file:///...
+    """
+    print("Generating TTS audio...")
+
+    # Tokenize và inference
+    inputs = tts_tokenizer(text, return_tensors="pt")
+    with torch.no_grad():
+        waveform = tts_model(**inputs).waveform
+    sampling_rate = tts_model.config.sampling_rate
+
+    # Tạo tên file an toàn
+    filename = f"{session_id}_{uuid.uuid4().hex}.wav"
+    output_path = os.path.join(TTS_OUTPUT_DIR, filename)
+
+    # Lưu file
+    sf.write(output_path, waveform[0].numpy(), sampling_rate)
+
+    # Trả về đường dẫn tuyệt đối cho file:///...
+    return os.path.abspath(output_path)

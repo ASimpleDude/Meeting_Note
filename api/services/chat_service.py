@@ -5,8 +5,9 @@ import logging
 import numpy as np
 import chromadb
 from tenacity import retry, wait_random_exponential, stop_after_attempt, retry_if_exception_type
-from openai import AzureOpenAI, APIError, RateLimitError, APITimeoutError
+from openai import AzureOpenAI, OpenAI, APIError, RateLimitError, APITimeoutError
 from sentence_transformers import SentenceTransformer, CrossEncoder
+from api.services.chroma_client import get_chroma_collection
 
 from api.config.config import (
     AZURE_OPENAI_API_KEY,
@@ -23,14 +24,19 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # 🧠 ChromaDB Client
 # ============================================================
-chroma_client = chromadb.Client()
-collection = chroma_client.get_or_create_collection(name="chat_memory")
+collection = get_chroma_collection()
 
 # ============================================================
-# 🔧 Embedding & Reranker Models (tải 1 lần, cache lại)
+# 🔧 Embedding & Reranker Models
 # ============================================================
-embedder = SentenceTransformer("sentence-transformers/all-mpnet-base-v2")
+# Local embedder (miễn phí)
+local_embedder = SentenceTransformer("sentence-transformers/multi-qa-MiniLM-L6-cos-v1")
+
+# Reranker (vẫn giữ nguyên)
 reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+
+# OpenAI embedding client (tùy chọn)
+openai_client = OpenAI(api_key=AZURE_OPENAI_API_KEY)
 
 # ============================================================
 # 🤖 Azure OpenAI Client
@@ -44,9 +50,36 @@ client = AzureOpenAI(
 # ============================================================
 # 🧩 Embedding Helper
 # ============================================================
-def get_embedding(text: str):
-    """Tạo vector embedding từ text bằng SentenceTransformer."""
-    return embedder.encode(text, convert_to_numpy=True).tolist()
+def safe_get_embedding(query: str):
+    query = query.strip()
+    if not query:
+        return None
+    try:
+        return get_embedding(query)
+    except Exception as e:
+        logger.error(f"❌ Embedding failed: {e}")
+        return None
+
+
+def get_embedding(text: str, use_openai: bool = False):
+    """
+    Sinh vector embedding từ text.
+    - Nếu use_openai=True → dùng text-embedding-3-small (OpenAI API)
+    - Ngược lại → dùng local model multi-qa-MiniLM-L6-cos-v1
+    """
+    if use_openai:
+        try:
+            response = openai_client.embeddings.create(
+                model="text-embedding-3-small",
+                input=text
+            )
+            emb = response.data[0].embedding
+            return emb
+        except Exception as e:
+            logger.warning(f"⚠️ Lỗi khi gọi OpenAI embedding API, fallback sang local: {e}")
+            return local_embedder.encode(text, convert_to_numpy=True).tolist()
+    else:
+        return local_embedder.encode(text, convert_to_numpy=True).tolist()
 
 # ============================================================
 # 💾 Lưu hội thoại vào ChromaDB
@@ -69,39 +102,70 @@ def save_to_chroma(session_id: str, user_message: str, assistant_reply: str):
 # ============================================================
 # 🔍 Tìm kiếm thông tin từ trí nhớ (ChromaDB + Reranker)
 # ============================================================
-def search_memory(session_id: str, query: str, top_k: int = 5, threshold: float = 0.7):
-    """Tìm kiếm nội dung liên quan trong cùng session bằng embedding + reranker."""
-    query_emb = get_embedding(query)
+import numpy as np
+from collections import defaultdict
+from numpy.linalg import norm
 
-    # 1️⃣ Vector Search (lấy sơ bộ)
-    results = collection.query(
-        query_embeddings=[query_emb],
-        n_results=top_k,
-        where={"session_id": session_id},
-    )
+def cosine_similarity(v1, v2):
+    v1, v2 = np.array(v1), np.array(v2)
+    if norm(v1) == 0 or norm(v2) == 0:
+        return 0.0
+    return np.dot(v1, v2) / (norm(v1) * norm(v2))
 
-    if not results or not results["documents"] or not results["documents"][0]:
-        logger.info("🕳 Không có kết quả trong Chroma.")
-        return ""
+def search_memory(session_id: str, query: str, top_k: int = 5, threshold: float = 0.7, return_score=False):
+    """
+    Search memory with exact question match first.
+    1. Check session cache
+    2. Check DB for exact question previously asked → return old answer
+    3. Embedding search + reranker if no exact match
+    4. Return only if score >= threshold
+    """
+    cache_key = query.strip()
 
-    candidate_docs = results["documents"][0]
+    query_emb = safe_get_embedding(query)
+    if not query_emb:
+        return ("", 0.0) if return_score else ""
 
-    # 2️⃣ Rerank bằng CrossEncoder
-    pairs = [[query, doc] for doc in candidate_docs]
-    scores = reranker.predict(pairs)
+    try:
+        results = collection.query(
+            query_embeddings=[query_emb],
+            n_results=top_k,
+            where={"session_id": session_id},
+            include=["documents", "embeddings"]  # cần include embeddings nếu có
+        )
+    except ValueError:
+        return ("", 0.0) if return_score else ""
 
+    candidate_docs = results.get("documents", [[]])[0]
+    if not candidate_docs:
+        return ("", 0.0) if return_score else ""
+
+    # =============================
+    # 1️⃣ Nếu embeddings có sẵn → tính cosine similarity
+    # =============================
+    candidate_embeddings = results.get("embeddings", [[]])[0]
+    if candidate_embeddings is not None and len(candidate_embeddings) == len(candidate_docs):
+        scores = [cosine_similarity(query_emb, doc_emb) for doc_emb in candidate_embeddings]
+    else:
+        # Fallback reranker
+        pairs = [[query, doc] for doc in candidate_docs]
+        raw_scores = reranker.predict(pairs)
+        scores = [np.tanh(s) for s in raw_scores]
+
+    # Chọn document tốt nhất
     sorted_indices = np.argsort(scores)[::-1]
     best_doc = candidate_docs[sorted_indices[0]]
     best_score = scores[sorted_indices[0]]
 
-    logger.info(f"🔎 Reranker top score: {best_score:.3f}")
+    logger.info(f"🔎 Memory search top score: {best_score:.3f}")
 
     if best_score >= threshold:
-        logger.info(f"✅ Found relevant memory (score={best_score:.3f})")
+        if return_score:
+            return best_doc, best_score
         return best_doc
     else:
-        logger.info(f"⚠️ No confident match (score={best_score:.3f})")
-        return ""
+        return ("", best_score) if return_score else ""
+
 
 # ============================================================
 # 🔁 Retry Wrapper cho Azure API

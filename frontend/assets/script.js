@@ -1,68 +1,136 @@
-let session_id = localStorage.getItem("session_id");
-let sessions = JSON.parse(localStorage.getItem("sessions")) || {}; // lưu lịch sử chat trên client
-let currentSession = session_id || createNewSession();
+let currentSession = null;
 
 // ===============================
-// Tạo session mới
+// Lấy danh sách session từ backend
 // ===============================
-function createNewSession() {
-  const id = crypto.randomUUID();
-  localStorage.setItem("session_id", id);
-  sessions[id] = [];
-  saveSessionsToStorage();
-  renderSessionList();
-  return id;
-}
-
-function saveSessionsToStorage() {
-  localStorage.setItem("sessions", JSON.stringify(sessions));
-}
-
-// ===============================
-// Render danh sách session
-// ===============================
-function renderSessionList() {
+async function renderSessionList() {
   const ul = document.getElementById("sessionList");
   ul.innerHTML = "";
-  for (const id in sessions) {
-    const li = document.createElement("li");
-    li.textContent = `Cuộc trò chuyện ${id.slice(0,6)}`;
-    li.onclick = () => switchSession(id);
-    ul.appendChild(li);
+
+  try {
+    const res = await fetch("http://127.0.0.1:8000/api/sessions");
+    const sessions = await res.json(); // [{id, name}, ...]
+    sessions.forEach(session => {
+      const li = document.createElement("li");
+      li.style.display = "flex";
+      li.style.justifyContent = "space-between";
+      li.style.alignItems = "center";
+      li.style.marginBottom = "5px";
+
+      // Tên session
+      const span = document.createElement("span");
+      span.textContent = session.name;
+      span.style.cursor = "pointer";
+      span.onclick = () => switchSession(session.id);
+      li.appendChild(span);
+
+      // Icon xóa
+      const deleteBtn = document.createElement("span");
+      deleteBtn.innerHTML = "🗑"; // icon thùng rác
+      deleteBtn.style.cursor = "pointer";
+      deleteBtn.style.color = "red";
+      deleteBtn.onclick = async (e) => {
+        e.stopPropagation(); // tránh trigger switchSession
+        if (!confirm("Bạn có chắc muốn xóa toàn bộ cuộc trò chuyện này?")) return;
+
+        try {
+          await fetch(`http://127.0.0.1:8000/api/chat/${session.id}`, { method: "DELETE" });
+          // Nếu xóa session đang mở thì clear chat
+          if (currentSession === session.id) {
+            currentSession = null;
+            document.getElementById("chat").innerHTML = "";
+          }
+          await renderSessionList(); // refresh danh sách
+        } catch (error) {
+          console.error("⚠️ Lỗi khi xóa session:", error);
+        }
+      };
+      li.appendChild(deleteBtn);
+
+      ul.appendChild(li);
+    });
+  } catch (error) {
+    console.error("⚠️ Lỗi khi lấy danh sách session:", error);
   }
 }
+
 renderSessionList();
 
-function switchSession(id) {
-  currentSession = id;
-  localStorage.setItem("session_id", id);
-  renderChat();
+// ===============================
+// Chuyển session
+// ===============================
+async function switchSession(session_id) {
+  currentSession = session_id;
+  await renderChat();
 }
 
 // ===============================
 // Hiển thị chat của session hiện tại
 // ===============================
-function renderChat() {
+async function renderChat() {
   const chatDiv = document.getElementById("chat");
   chatDiv.innerHTML = "";
-  const messages = sessions[currentSession] || [];
-  for (const msg of messages) {
-    const cls = msg.role === "user" ? "user" : "ai";
-    if (msg.role === "user") {
-      chatDiv.innerHTML += `<div class="msg user"><pre>${msg.content}</pre></div>`;
-    } else {
-        chatDiv.innerHTML += `<div class="msg ${cls}"><pre>${msg.content}</pre></div>
-      <div style="margin-top: 10px;">
-        <audio controls style="width: 100%; max-width: 400px;">
-          <source src="../../api/artifacts/audio/50afd953-5107-4ee8-a00d-d261ae717e56.wav" type="audio/wav">
-          Your browser does not support the audio element.
-        </audio>
-      </div>`;
+  if (!currentSession) return;
+
+  try {
+    const res = await fetch(`http://127.0.0.1:8000/api/chat/${currentSession}`);
+    const messages = await res.json(); // [{role, content, audio_path?}, ...]
+
+    for (const msg of messages) {
+      if (msg.role === "user") {
+        // Tin nhắn user
+        const userDiv = document.createElement("div");
+        userDiv.className = "msg user";
+        const pre = document.createElement("pre");
+        pre.textContent = msg.content;
+        userDiv.appendChild(pre);
+        chatDiv.appendChild(userDiv);
+      } else if (msg.role === "assistant") {
+        // Tin nhắn AI
+        const aiDiv = document.createElement("div");
+        aiDiv.className = "msg ai";
+
+        // Nội dung text
+        const pre = document.createElement("pre");
+        pre.textContent = msg.content;
+        aiDiv.appendChild(pre);
+
+        // Nếu có audio, thêm audio control ngay dưới
+        if (msg.audio_path) {
+          const audioDiv = document.createElement("div");
+          audioDiv.style.marginTop = "10px";
+
+          const audioEl = document.createElement("audio");
+          audioEl.controls = true;
+          audioEl.style.width = "100%";
+          audioEl.style.maxWidth = "400px";
+
+          const source = document.createElement("source");
+          source.src = msg.audio_path;
+          source.type = "audio/wav";
+          audioEl.appendChild(source);
+
+          audioDiv.appendChild(audioEl);
+          aiDiv.appendChild(audioDiv);
+        }
+
+        chatDiv.appendChild(aiDiv);
+      }
     }
+
+    // Scroll xuống cuối chat
+    chatDiv.scrollTop = chatDiv.scrollHeight;
+  } catch (error) {
+    const errorDiv = document.createElement("div");
+    errorDiv.className = "msg ai";
+    errorDiv.style.color = "red";
+    const pre = document.createElement("pre");
+    pre.textContent = "⚠️ Lỗi khi load chat";
+    errorDiv.appendChild(pre);
+    chatDiv.appendChild(errorDiv);
   }
-  chatDiv.scrollTop = chatDiv.scrollHeight;
 }
-renderChat();
+
 
 // ===============================
 // Auto-resize textarea
@@ -86,6 +154,11 @@ function handleKey(event) {
 // Gửi message lên backend
 // ===============================
 async function sendMessage() {
+  if (!currentSession) {
+    alert("Vui lòng chọn hoặc tạo session trước!");
+    return;
+  }
+
   const userInput = document.getElementById("userInput");
   const ttsInput = document.getElementById("tts");
   const chatDiv = document.getElementById("chat");
@@ -93,18 +166,18 @@ async function sendMessage() {
   const tts = ttsInput.checked;
   if (!msg) return;
 
-  // Append user message
-  chatDiv.innerHTML += `<div class="msg user"><pre>${msg}</pre></div>`;
+  // Append user message bằng createElement
+  const userDiv = document.createElement("div");
+  userDiv.className = "msg user";
+  const preUser = document.createElement("pre");
+  preUser.textContent = msg;
+  userDiv.appendChild(preUser);
+  chatDiv.appendChild(userDiv);
   chatDiv.scrollTop = chatDiv.scrollHeight;
+
   userInput.value = "";
   userInput.style.height = "auto";
 
-  // Lưu trên client
-  if (!sessions[currentSession]) sessions[currentSession] = [];
-  sessions[currentSession].push({role: "user", content: msg});
-  saveSessionsToStorage();
-
-  // Gọi backend
   try {
     const response = await fetch("http://127.0.0.1:8000/api/chat", {
       method: "POST",
@@ -113,96 +186,131 @@ async function sendMessage() {
     });
     const data = await response.json();
     const reply = data.reply;
+    const audio_path = data.audio_path || null;
 
-    // Append AI message
-    chatDiv.innerHTML += `<div class="msg ai"><pre>${reply}</pre></div>
-      <div style="margin-top: 10px;">
-        <audio controls style="width: 100%; max-width: 400px;">
-          <source src="../../api/artifacts/audio/50afd953-5107-4ee8-a00d-d261ae717e56.wav" type="audio/wav">
-          Your browser does not support the audio element.
-        </audio>
-      </div>
-    `;
-    chatDiv.scrollTop = chatDiv.scrollHeight;
+    // Append AI message chuẩn
+    appendAiMessage(reply, audio_path);
 
-    // Lưu AI message
-    sessions[currentSession].push({role: "assistant", content: reply});
-    saveSessionsToStorage();
-
-    // Cập nhật session_id nếu backend trả session mới
     currentSession = data.session_id;
-    localStorage.setItem("session_id", currentSession);
-    renderSessionList();
-
+    renderSessionList(); // refresh danh sách session
   } catch (error) {
-    chatDiv.innerHTML += `<div class="msg ai" style="color:red;"><pre>⚠️ Lỗi: Không kết nối được server</pre></div>`;
+    const errorDiv = document.createElement("div");
+    errorDiv.className = "msg ai";
+    errorDiv.style.color = "red";
+    const preError = document.createElement("pre");
+    preError.textContent = "⚠️ Lỗi: Không kết nối được server";
+    errorDiv.appendChild(preError);
+    chatDiv.appendChild(errorDiv);
+    chatDiv.scrollTop = chatDiv.scrollHeight;
   }
 }
 
+// Hàm append AI message chuẩn
+function appendAiMessage(reply, audio_path=null) {
+  const chatDiv = document.getElementById("chat");
+
+  const aiDiv = document.createElement("div");
+  aiDiv.className = "msg ai";
+
+  const pre = document.createElement("pre");
+  pre.textContent = reply;
+  aiDiv.appendChild(pre);
+
+  if (audio_path) {
+    const audioDiv = document.createElement("div");
+    audioDiv.style.marginTop = "10px";
+
+    const audioEl = document.createElement("audio");
+    audioEl.controls = true;
+    audioEl.style.width = "100%";
+    audioEl.style.maxWidth = "400px";
+
+    const source = document.createElement("source");
+    source.src = audio_path;
+    source.type = "audio/wav";
+    audioEl.appendChild(source);
+
+    audioDiv.appendChild(audioEl);
+    aiDiv.appendChild(audioDiv);
+  }
+
+  chatDiv.appendChild(aiDiv);
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+}
+
+
 // ===============================
-// Nút tạo session mới
+// Tạo session mới
 // ===============================
 document.getElementById("newSessionBtn").onclick = () => {
-  currentSession = createNewSession();
-  renderChat();
-};
-// ===============================
-// 🧠 GỬI NHIỀU TIN NHẮN MỘT LÚC (BATCH)
-// ===============================
-document.getElementById("batchBtn").addEventListener("click", () => {
-  // Toggle hiển thị
-  document.getElementById("popup-batch").style.display = "block";
-});
+  // Tạo session mới tạm thời trên frontend
+  const newId = crypto.randomUUID();
+  currentSession = newId;
 
-// Nếu bạn muốn đóng bằng nút "Close" trong popup:
-document.getElementById("closePopup").addEventListener("click", () => {
-  // Toggle hiển thị
-  document.getElementById("popup-batch").style.display = "none";
-});
-document.getElementById("sendBatch").onclick = async () => {
-  document.getElementById("popup-batch").style.display = "none";
-  var input = document.getElementById("batchInput").value;
-  console.log(input);
-  const messages = input.split("note").map(m => m.trim()).filter(m => m !== "");
-  if (messages.length === 0) {
-    alert("Không có tin nhắn hợp lệ.");
-    return;
-  }
+  // Hiển thị tên session là thời gian hiện tại
+  const sessionName = new Date().toLocaleString();
 
+  // Thêm session vào danh sách HTML
+  const ul = document.getElementById("sessionList");
+  const li = document.createElement("li");
+  li.textContent = sessionName;
+  li.onclick = () => switchSession(newId);
+  ul.appendChild(li);
+
+  // Hiển thị chat trống
   const chatDiv = document.getElementById("chat");
-  chatDiv.innerHTML += `<div class="msg user"><pre>📤 Gửi ${messages.length} tin nhắn trong hội thoại...</pre></div>`;
-  chatDiv.scrollTop = chatDiv.scrollHeight;
+  chatDiv.innerHTML = "";
+};
+
+
+// ===============================
+// Nút xóa chat
+// ===============================
+document.getElementById("clearChatBtn").onclick = async () => {
+  if (!currentSession) return;
+  if (!confirm("Bạn có chắc muốn xóa toàn bộ cuộc trò chuyện này?")) return;
 
   try {
-    const response = await fetch("http://127.0.0.1:8000/api/chat/batch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        messages: messages,
-        session_id: currentSession
-      })
-    });
-
-    const data = await response.json();
-    console.log("Batch API response:", data);
-
-    // ✅ Giả sử backend trả về { "replies": [ ... ] }
-    if (data.replies && Array.isArray(data.replies)) {
-      for (let i = 0; i < data.replies.length; i++) {
-        const reply = data.replies[i];
-        chatDiv.innerHTML += `<div class="msg ai"><pre>🧩 Batch ${i+1}: ${reply}</pre></div>`;
-        // Lưu từng phản hồi vào session
-        sessions[currentSession].push({ role: "assistant", content: reply });
-      }
-      saveSessionsToStorage();
-      chatDiv.scrollTop = chatDiv.scrollHeight;
-    } else {
-      chatDiv.innerHTML += `<div class="msg ai" style="color:red;"><pre>⚠️ Dữ liệu trả về không đúng định dạng.</pre></div>`;
-    }
-
+    await fetch(`http://127.0.0.1:8000/api/chat/${currentSession}`, { method: "DELETE" });
+    await renderChat(); // load lại chat (trống)
+    renderSessionList(); // cập nhật danh sách session
   } catch (error) {
-    console.error("Batch error:", error);
-    chatDiv.innerHTML += `<div class="msg ai" style="color:red;"><pre>⚠️ Lỗi: Không kết nối được server</pre></div>`;
+    console.error("⚠️ Lỗi khi xóa chat:", error);
   }
 };
 
+
+// Append AI message
+function appendAiMessage(reply, audio_path=null) {
+  const chatDiv = document.getElementById("chat");
+
+  // Wrapper cho mỗi message
+  const msgWrapper = document.createElement("div");
+  msgWrapper.className = "msg ai";
+
+  // Nội dung text
+  const pre = document.createElement("pre");
+  pre.textContent = reply;
+  msgWrapper.appendChild(pre);
+
+  // Nếu có audio, thêm audio control ngay dưới
+  if (audio_path) {
+    const audioDiv = document.createElement("div");
+    audioDiv.style.marginTop = "10px";
+    const audioEl = document.createElement("audio");
+    audioEl.controls = true;
+    audioEl.style.width = "100%";
+    audioEl.style.maxWidth = "400px";
+
+    const source = document.createElement("source");
+    source.src = audio_path;
+    source.type = "audio/wav";
+    audioEl.appendChild(source);
+
+    audioDiv.appendChild(audioEl);
+    msgWrapper.appendChild(audioDiv);
+  }
+
+  chatDiv.appendChild(msgWrapper);
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+}

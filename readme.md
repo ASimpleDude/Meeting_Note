@@ -1,6 +1,8 @@
 ## Install packages:
 pip install -r requirements.txt
 
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.venv\Scripts\Activate.ps1
 
 Run app:
 uvicorn api.main:app --reload --port 8000
