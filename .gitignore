@@ -5,4 +5,6 @@
 **/__pycache__/
 *.py[cod]
 .idea
-/api/artifacts/conversation_log
+/api/artifacts/
+.venv
+.vscode
