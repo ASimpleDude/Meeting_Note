@@ -1,26 +1,23 @@
-## Install packages:
-pip install -r requirements.txt
+## Cài đặt
 
+### 1. Xóa môi trường ảo cũ (nếu có)
+Remove-Item -Recurse -Force .venv
+
+
+### 2. Tạo môi trường ảo mới
+python -m venv .venv
+
+
+### 3. Kích hoạt môi trường ảo
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .venv\Scripts\Activate.ps1
 
-Run app:
+
+> **Lưu ý:** Lệnh trên chỉ áp dụng cho Terminal trong VS CODE.
+
+### 4. Cài đặt các package cần thiết
+pip install -r requirements.txt
+
+
+## Chạy ứng dụng
 uvicorn api.main:app --reload --port 8000
-
-Tạo file .env theo template sau ở folder gốc Meeting_Note:
-AZURE_OPENAI_ENDPOINT=https://aiportalapi.stu-platform.live/jpe
-AZURE_OPENAI_API_KEY= tự đút key vào đây
-AZURE_OPENAI_API_VERSION=2024-08-01-preview
-AZURE_OPENAI_DEPLOYMENT=GPT-4o-mini
-
-UI → POST /chat → ai_chat.py
-      ↓
-moderate_input() ✅
-      ↓
-generate_summary() 🧠
-      ↓
-_call_azure_openai() (structured JSON)
-      ↓
-AzureOpenAI → model trả JSON
-      ↓
-Parse JSON → gửi về frontend
