@@ -1,48 +1,68 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Chatbot</title>
-  <link rel="stylesheet" href="./assets/style.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cô thư ký chân dài 💼</title>
+
+    <!-- 🌸 Font mềm mại -->
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./assets/style.css" />
 </head>
+
 <body>
 
-<div id="container">
-  <!-- Cột bên trái: danh sách session -->
-  <div id="sidebar">
-    <h3>💬 Lịch sử trò chuyện</h3>
-    <ul id="sessionList"></ul>
-    <button id="newSessionBtn">+ Cuộc trò chuyện mới</button>
-  </div>
-
-  <!-- Cột bên phải: chat -->
-  <div id="chatWrapper">
-    <h2>AI Chatbot</h2>
-    <div id="chat"></div>
-    <div id="inputBox">
-        <div>
-            <input type="checkbox" id="tts">Text To Speech
-        </div>
-        <div style="display: flex; gap: 10px; margin-top: 10px;">
-            <textarea id="userInput" rows="1" placeholder="Nhập tin nhắn..." oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
-            <button onclick="sendMessage()">Send</button>
-            <button id="batchBtn" style="background:#16a34a;">Batch</button>
-            <button id="clearChatBtn" style="background:#dc2626; color:white;">Clear</button>
+<!-- 💁‍♀️ Header chính -->
+<header class="chat-header">
+    <div class="assistant-header">
+        <!--        <img src="./assets/assistant.png" alt="Cô thư ký" class="assistant-avatar">-->
+        <div class="assistant-info">
+            <h2 class="assistant-name">💼 Cô thư ký chân dài</h2>
+            <p class="assistant-sub">Luôn sẵn sàng hỗ trợ bạn 💬</p>
         </div>
     </div>
+</header>
 
-  </div>
-  <div id="popup-batch">
-    <h3>Send batch request:</h3>
-    <div style="width: 100%; margin-x: 20px">
-      <textarea style="width: 100%" id="batchInput" rows="15"></textarea>
+<!-- 🧠 App chính -->
+<div id="app-container">
+    <!-- Sidebar -->
+    <aside id="sidebar">
+        <div class="sidebar-header">
+            <h3>🧠 Meeting AI</h3>
+            <p class="subtitle">Lịch sử trò chuyện</p>
+        </div>
+        <ul id="sessionList"></ul>
+        <button id="newSessionBtn">+ Cuộc trò chuyện mới</button>
+    </aside>
+
+    <!-- Chat wrapper -->
+    <main id="chatWrapper">
+        <section id="chat"></section>
+
+        <!-- Input box -->
+        <footer id="inputBox">
+            <div class="tts-box">
+                <input type="checkbox" id="tts">
+                <label for="tts">Text To Speech</label>
+            </div>
+            <div class="input-actions">
+                <textarea id="userInput" rows="1" placeholder="Nhập tin nhắn..." oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+                <button class="send-btn" onclick="sendMessage()">Gửi</button>
+                <button id="batchBtn">Batch</button>
+                <button id="clearChatBtn" class="danger">Clear</button>
+            </div>
+        </footer>
+    </main>
+
+    <!-- Popup batch -->
+    <div id="popup-batch">
+        <h3>Batch Request</h3>
+        <textarea id="batchInput" rows="15"></textarea>
+        <div class="popup-actions">
+            <button id="sendBatch">Gửi</button>
+            <button id="closePopup">Đóng</button>
+        </div>
     </div>
-    <div>
-      <button id="sendBatch">Send</button>
-      <button id="closePopup">Close</button>
-    </div>
-  </div>
 </div>
 
 <script src="./assets/script.js"></script>
