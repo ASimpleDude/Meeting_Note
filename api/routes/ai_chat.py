@@ -2,10 +2,13 @@ from fastapi import APIRouter, Request
 from api.utils.session_manager import create_session_id
 from api.utils.conversation_logger import save_message_to_db, get_all_sessions, get_session_messages, delete_chroma_messages, delete_session_messages
 from api.utils.prompt_loader import load_system_prompt
-from api.services.chat_service import (
-    generate_summary,
+from api.services.embedding_service import (
     save_to_chroma,
-    search_memory
+    search_memory_chroma,
+    search_memory_pinecone, save_to_pinecone
+)
+from api.services.chat_service import (
+    generate_summary
 )
 from api.services.chat_tts import generate_tts_audio
 # =========================
@@ -35,7 +38,10 @@ async def chat_endpoint(request: Request):
     save_message_to_db(session_id, "user", user_input, "")
 
     # Tìm trong ChromaDB
-    memory_context, best_score = search_memory(session_id, user_input, return_score=True)
+    # memory_context, best_score = search_memory_chroma(session_id, user_input, return_score=True)
+    # Tìm trong Pinecone
+    memory_context, best_score = search_memory_pinecone(session_id, user_input, return_score=True)
+
 
     if best_score >= 0.7:
         # Trùng → dùng lại câu trả lời cũ
@@ -62,7 +68,9 @@ async def chat_endpoint(request: Request):
     save_message_to_db(session_id, "assistant", reply, audio_path or "")
 
     # Lưu vào ChromaDB
-    save_to_chroma(session_id, user_input, reply)
+    # save_to_chroma(session_id, user_input, reply)
+    # Lưu vào Pinecone
+    save_to_pinecone(session_id, user_input, reply)
 
     return {"session_id": session_id, "reply": reply, "audio_path": audio_path}
 
