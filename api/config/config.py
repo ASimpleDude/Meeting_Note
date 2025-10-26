@@ -16,6 +16,10 @@ AZURE_OPENAI_API_KEY = get_env_variable("AZURE_OPENAI_API_KEY")
 AZURE_OPENAI_API_VERSION = get_env_variable("AZURE_OPENAI_API_VERSION")
 AZURE_OPENAI_DEPLOYMENT = get_env_variable("AZURE_OPENAI_DEPLOYMENT")
 
+# Cấu hình pinecone
+PINECONE_API_KEY = get_env_variable("PINECONE_API_KEY")
+PINECONE_INDEX_NAME = get_env_variable("PINECONE_INDEX_NAME")
+
 PROMPT_PATH = "prompt/prompt-guidelines.md"
 LOG_DIR = "api/artifacts/conversation_log"
 

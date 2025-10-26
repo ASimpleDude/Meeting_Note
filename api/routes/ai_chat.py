@@ -40,7 +40,7 @@ async def chat_endpoint(request: Request):
     # Tìm trong ChromaDB
     # memory_context, best_score = search_memory_chroma(session_id, user_input, return_score=True)
     # Tìm trong Pinecone
-    memory_context, best_score = search_memory_pinecone(session_id, user_input, return_score=True)
+    memory_context, best_score = search_memory_pinecone(session_id, user_input)
 
 
     if best_score >= 0.7:

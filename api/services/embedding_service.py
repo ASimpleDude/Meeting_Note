@@ -6,12 +6,12 @@ from sentence_transformers import SentenceTransformer, CrossEncoder
 from scipy.spatial.distance import cosine
 from api.services.chroma_client import get_chroma_collection
 from api.config.config import (
-    AZURE_OPENAI_API_KEY,
+    AZURE_OPENAI_API_KEY
 )
 # Client OpenAI (sử dụng khi cần embedding từ API)
 openai_client = OpenAI(api_key=AZURE_OPENAI_API_KEY)
-from api.services.pinecone_client import get_index
-index = get_index()
+from api.services.langchain_client import get_vector_store
+vector_store = get_vector_store()
 
 
 logger = logging.getLogger(__name__)
@@ -90,22 +90,13 @@ def save_to_chroma(session_id: str, user_message: str, assistant_reply: str):
 # 💾 Lưu hội thoại vào Pinecone
 # ============================================================
 def save_to_pinecone(session_id: str, user_message: str, assistant_reply: str):
-    text = f"[{session_id}] User: {user_message}\nAssistant: {assistant_reply}"
-    embedding = get_embedding(text)
+    text = f"User: {user_message}\nAssistant: {assistant_reply}"
 
-    id_value = f"{session_id}-{np.random.randint(1_000_000)}"
-
-    index.upsert(
-        vectors=[{
-            "id": id_value,
-            "values": embedding,
-            "metadata": {
-                "session_id": session_id,
-                "text": text
-            }
-        }]
+    vector_store.add_texts(
+        texts=[text],
+        metadatas=[{"session_id": session_id}],
+        ids=[f"{session_id}-{np.random.randint(1_000_000)}"]
     )
-    logger.info(f"Saved to Pinecone: {id_value}")
 
 # ============================================================
 # 🔍 Hàm hỗ trợ tìm kiếm trong trí nhớ
@@ -122,6 +113,16 @@ def extract_qa_from_doc(doc: str):
     answer = assistant_match.group(1).strip() if assistant_match else ""
     return question, answer
 
+def rerank_and_select(query, docs):
+    if not docs:
+        return ""
+
+    pairs = [[query, doc.page_content] for doc in docs]
+    scores = reranker.predict(pairs)
+
+    best_idx = int(np.argmax(scores))
+    _, answer = extract_qa_from_doc(docs[best_idx].page_content)
+    return answer
 
 def cosine_similarity(vec1, vec2):
     """Tính độ tương đồng cosine giữa hai vector."""
@@ -183,27 +184,14 @@ def search_memory_chroma(session_id: str, query: str, top_k: int = 3, threshold:
         return ("", float(best_score)) if return_score else ""
 
 
-def search_memory_pinecone(session_id: str, query: str, top_k: int = 3, threshold: float = 0.7, return_score=False):
-    query_emb = safe_get_embedding(query)
-    if not query_emb:
-        return ("", 0.0) if return_score else ""
-
-    result = index.query(
-        vector=query_emb,
-        filter={"session_id": {"$eq": session_id}},
-        top_k=top_k,
-        include_metadata=True
+def search_memory_pinecone(session_id: str, query: str, top_k: int = 3):
+    retriever = vector_store.as_retriever(
+        search_kwargs={
+            "k": top_k,
+            "filter": {"session_id": session_id}
+        }
     )
 
-    if not result.matches:
-        return ("", 0.0) if return_score else ""
+    docs = retriever.get_relevant_documents(query)
 
-    best_score = result.matches[0].score
-    best_doc = result.matches[0].metadata.get("text", "")
-
-    if best_score < threshold:
-        return ("", best_score) if return_score else ""
-
-    # Trích riêng câu trả lời
-    _, best_ans = extract_qa_from_doc(best_doc)
-    return (best_ans, best_score) if return_score else best_ans
+    return rerank_and_select(query, docs)

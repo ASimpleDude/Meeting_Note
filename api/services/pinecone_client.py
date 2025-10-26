@@ -1,5 +1,5 @@
 from pinecone import Pinecone, ServerlessSpec
-from api.config.config import PINECONE_API_KEY, PINECONE_INDEX_NAME, PINECONE_ENV
+from api.config.config import PINECONE_API_KEY, PINECONE_INDEX_NAME
 
 pc = Pinecone(api_key=PINECONE_API_KEY)
 
