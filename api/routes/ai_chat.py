@@ -50,7 +50,7 @@ async def chat_endpoint(request: Request):
     # ============================================================
     memory_context, best_score = search_memory_pinecone(session_id, user_input)
 
-    if best_score >= 0.7:
+    if best_score >= 0.8:
         # ✅ Nếu câu hỏi đã có trong trí nhớ
         print(f"[🔁] Reuse memory | score={best_score:.3f}")
         reply = memory_context.split("Assistant:")[-1].strip()
@@ -105,7 +105,6 @@ def get_chat(session_id: str):
 @router.delete("/api/chat/{session_id}")
 def delete_chat(session_id: str):
     """Xóa sạch dữ liệu hội thoại và trí nhớ của một session."""
-    delete_chroma_messages(session_id)
     delete_session_messages(session_id)
     sessions_messages.pop(session_id, None)
     return {"status": "ok"}

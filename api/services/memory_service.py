@@ -90,7 +90,7 @@ def search_memory_pinecone(session_id: str, query: str, top_k: int = 3):
 
     # optional: compute rough scores using embedding cosine between query and doc-question
     # but here we trust retriever order; we'll compute a coarse similarity using embeddings
-    query_emb = safe_get_embedding(query, True)
+    query_emb = safe_get_embedding(query)
     best_score = 0.0
     best_doc_text = ""
 
@@ -99,7 +99,7 @@ def search_memory_pinecone(session_id: str, query: str, top_k: int = 3):
         doc_text = d.page_content
         user_q, ai_ans = extract_qa_from_doc(doc_text)
         if user_q:
-            user_q_emb = safe_get_embedding(user_q, True)
+            user_q_emb = safe_get_embedding(user_q)
             sim = cosine_similarity(query_emb, user_q_emb) if user_q_emb is not None else 0.0
         else:
             sim = 0.0
