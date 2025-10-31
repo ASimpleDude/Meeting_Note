@@ -1,22 +1,37 @@
-from langchain_openai import OpenAIEmbeddings
-from langchain_community.vectorstores import Pinecone as PineconeStore
-from pinecone import Pinecone
-from api.config.config import PINECONE_API_KEY
-from api.services.pinecone_client import get_index
+# api/services/langchain_client.py
+import os
+from pinecone import Pinecone, ServerlessSpec
+from langchain_pinecone import PineconeVectorStore
+from api.config.config import PINECONE_API_KEY, PINECONE_INDEX_NAME
+from api.services.embedding_service import local_embedder  # acceptable: langchain_client -> embedding_service
 
-# Embedding: dùng local của bạn nếu muốn
-embed_model = OpenAIEmbeddings(model="text-embedding-3-small")
-
+# Pinecone client (SDK v7+)
 pc = Pinecone(api_key=PINECONE_API_KEY)
-index = get_index()
 
-# Kết nối LangChain với Pinecone index đã có
-vector_store = PineconeStore(
-    embedding=embed_model,
-    index=index,
-    text_key="text",
-    namespace="chat-memory" # chia namespace, scale tốt hơn filter
-)
+def ensure_index(name: str, dimension: int):
+    existing = [i["name"] for i in pc.list_indexes()]
+    if name not in existing:
+        pc.create_index(name=name, dimension=dimension, metric="cosine",
+                        spec=ServerlessSpec(cloud="aws", region="us-east-1"))
+    return pc.Index(name)
+
+# auto-detect dim from local_embedder
+try:
+    DIM = getattr(local_embedder, "get_sentence_embedding_dimension", None)
+    if callable(DIM):
+        DIM = local_embedder.get_sentence_embedding_dimension()
+    elif hasattr(local_embedder, "embed_dim"):
+        DIM = local_embedder.embed_dim
+    else:
+        DIM = 384
+except Exception:
+    DIM = 384
+
+INDEX = ensure_index(PINECONE_INDEX_NAME, DIM)
+# simple wrapper embed function for langchain_pinecone
+def _embed_fn(texts):
+    return [local_embedder.encode(t, convert_to_numpy=True).tolist() for t in texts]
 
 def get_vector_store():
-    return vector_store
+    """Return a LangChain-compatible PineconeVectorStore"""
+    return PineconeVectorStore(index=INDEX, embedding=_embed_fn, text_key="text")

@@ -1,18 +1,17 @@
-from pinecone import Pinecone, ServerlessSpec
-from api.config.config import PINECONE_API_KEY, PINECONE_INDEX_NAME
+# ============================================================
+# 📁 api/services/pinecone_client.py
+# ============================================================
 
-pc = Pinecone(api_key=PINECONE_API_KEY)
+from pinecone import ServerlessSpec
 
-# Tạo index nếu chưa tồn tại
-if PINECONE_INDEX_NAME not in pc.list_indexes().names():
-    pc.create_index(
-        name=PINECONE_INDEX_NAME,
-        dimension=384,  # đúng với MiniLM-L6-cos-v1
-        metric="cosine",
-        spec=ServerlessSpec(cloud="aws", region="us-east-1")
-    )
-
-index = pc.Index(PINECONE_INDEX_NAME)
-
-def get_index():
-    return index
+def get_index(pc, index_name: str):
+    """Trả về Pinecone index, tạo mới nếu chưa có."""
+    indexes = [i["name"] for i in pc.list_indexes()]
+    if index_name not in indexes:
+        pc.create_index(
+            name=index_name,
+            dimension=384,
+            metric="cosine",
+            spec=ServerlessSpec(cloud="aws", region="us-east-1")
+        )
+    return pc.Index(index_name)
