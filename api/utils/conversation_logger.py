@@ -1,6 +1,5 @@
 import sqlite3
 import os
-from api.services.chroma_client import get_chroma_collection
 
 DB_PATH = "conversation.db"
 
@@ -67,11 +66,3 @@ def delete_session_messages(session_id: str):
     cur.execute("DELETE FROM conversation_history WHERE session_id=?", (session_id,))
     conn.commit()
     conn.close()
-
-def delete_chroma_messages(session_id: str):
-    """
-    Xóa toàn bộ messages của session_id trong ChromaDB
-    """
-    collection = get_chroma_collection()
-    # Xóa tất cả vector liên quan đến session_id
-    collection.delete(where={"session_id": session_id})

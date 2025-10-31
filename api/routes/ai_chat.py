@@ -7,14 +7,11 @@ from api.utils.conversation_logger import (
     save_message_to_db,
     get_all_sessions,
     get_session_messages,
-    delete_chroma_messages,
     delete_session_messages,
 )
 from api.utils.prompt_loader import load_system_prompt
 from api.services.memory_service import (
-    save_to_chroma,
     save_to_pinecone,
-    search_memory_chroma,
     search_memory_pinecone,
 )
 from api.services.chat_service import generate_summary

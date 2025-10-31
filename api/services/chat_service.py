@@ -10,7 +10,6 @@ from api.config.config import (
     AZURE_OPENAI_API_VERSION,
     AZURE_OPENAI_ENDPOINT,
 )
-from api.services.moderation_service import moderate_input
 
 
 # ============================================================
@@ -63,27 +62,32 @@ def generate_summary(messages: list, user_input: str = None, memory_context: str
     Nếu có 'memory_context' thì nối thêm vào prompt để cung cấp ngữ cảnh.
     """
     try:
-        user_message = user_input or messages[-1]["content"]
+        # ✅ Fallback an toàn nếu messages rỗng
+        if not messages:
+            messages = [{"role": "user", "content": user_input or ""}]
 
-        # Thêm phần trí nhớ trước đó nếu có
-        if memory_context:
-            user_message += f"\n\nThông tin liên quan từ các lần trao đổi trước:\n{memory_context}\n"
+        user_message = user_input or messages[-1].get("content", "")
+
+        # ✅ Bảo vệ memory_context kiểu dữ liệu
+        if memory_context and isinstance(memory_context, str):
+            user_message += f"\n\nThông tin liên quan từ các lần trao đổi trước:\n{memory_context.strip()}\n"
 
         temp_messages = messages.copy()
-        temp_messages[-1]["content"] = user_message
-
-        # (Tuỳ chọn) Kiểm duyệt nội dung người dùng
-        # if not moderate_input(user_message):
-        #     return "Nội dung bị từ chối — vui lòng không gửi dữ liệu nhạy cảm."
+        temp_messages[-1]["content"] = user_message.strip()
 
         response = _call_azure_openai(temp_messages)
-        if not response or not response.choices:
+
+        if not response or not hasattr(response, "choices") or not response.choices:
             return "Không có phản hồi từ mô hình."
 
-        reply = response.choices[0].message.content.strip()
-        logger.info("Model trả về phản hồi hợp lệ.")
+        reply = getattr(response.choices[0].message, "content", "").strip()
+        if not reply:
+            return "Mô hình không trả về nội dung hợp lệ."
+
+        logger.info("✅ Model trả về phản hồi hợp lệ.")
         return reply
 
     except Exception as e:
-        logger.exception(f"Lỗi khi gọi Azure OpenAI: {e}")
+        logger.exception(f"🔥 Lỗi khi gọi Azure OpenAI: {e}")
         return "Đã xảy ra lỗi khi xử lý yêu cầu từ mô hình."
+

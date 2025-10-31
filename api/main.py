@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from api.routes import ai_chat, ai_batch
+from api.routes import ai_chat
 from api.utils.conversation_logger import init_db
 from contextlib import asynccontextmanager
 import os
@@ -50,7 +50,6 @@ app.mount("/audio", StaticFiles(directory=AUDIO_DIR), name="audio")
 # Routes
 # =========================
 app.include_router(ai_chat.router)
-# app.include_router(ai_batch.router)
 
 # =========================
 # Root endpoint
